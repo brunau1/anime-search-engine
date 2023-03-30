@@ -27,7 +27,7 @@ def preprocess_text(text):
 
 # Carrega os dados do arquivo JSON e faz o pré-processamento
 def load_tfidf_vectors():
-    print('Loading data...')
+    print('Loading tfidf data...')
     file_path = os.path.abspath(os.path.join(
         os.path.dirname(__file__), '..', 'public', 'animes.json'))
 
@@ -51,7 +51,7 @@ def load_tfidf_vectors():
 
 
 # Função que realiza a busca
-def get_ranking_by_cos_similarity(query, rank_count, anime_data):
+def get_cos_similarity_weight_ranking(query, rank_count, anime_data):
     # Pré-processa a consulta
     query = preprocess_text(query)
     # Transforma a consulta em vetor TF-IDF
