@@ -1,10 +1,7 @@
 Parametros W2V melhores ocorrencias
 min_count=1,
 window=3,
-vector_size=200,
+vector_size=vector_size,
 sample=6e-5,
 alpha=0.03,
-min_alpha=0.0007,
-negative=20
-epochs=300
-total_examples=15444
+min_alpha=0.007
