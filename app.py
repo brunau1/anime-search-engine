@@ -9,13 +9,14 @@ app = Flask(__name__)
 def search():
     payload = request.get_json()
 
-    # accepted parameters: embedding_method, similarity_method, rank_count
-    print(request.args.keys())
-
     text = payload['text']
-    # ranking_count = int(payload['ranking_count'])
 
-    ranking = s_engine.search(text, 'tfidf', 'cosine')
+    # accepted parameters: embedding_method, similarity_method, rank_count
+    embedding_method = request.args['embedding_method']
+    similarity_method = request.args['similarity_method']
+    rank_count = int(request.args['rank_count'])
+
+    ranking = s_engine.search(text, embedding_method, similarity_method, rank_count)
 
     response = {
         'ranking': ranking

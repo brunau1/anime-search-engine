@@ -13,7 +13,7 @@ class SearchEngine:
         self.tfidf_core = TfIdfRanking(names, processed_content)
         self.w2v_core = WordToVecRanking(names, processed_content)
 
-    def search(self, query, embedding_method, similarity_method, rank_count=10):
+    def search(self, query, embedding_method='tfidf', similarity_method='cosine', rank_count=10):
         if embedding_method == 'tfidf':
             return self.tfidf_core.search(query, similarity_method, rank_count)
         elif embedding_method == 'w2v':

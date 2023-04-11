@@ -82,11 +82,11 @@ def search(query, names, text_vectors, model, vector_size, top_k=10, similarity_
 
     # Calcula as similaridades entre a consulta e os textos
 
-    # Redimensiona o vetor da consulta para que
-    # ele possa ser usado na função cosine_similarity
     ranking = []
 
     if similarity_method == 'cosine':
+    # Redimensiona o vetor da consulta para que
+    # ele possa ser usado na função cosine_similarity
         query_vector = query_vector.reshape(1, -1)
 
         ranking = cos_similarity_top_results(
