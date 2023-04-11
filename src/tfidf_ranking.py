@@ -1,7 +1,7 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
-from preprocess import preprocess_text, read_animes_json
-from ranking import cos_similarity_top_results, euclidean_distance_top_results
-from timer import Timer
+from src.preprocess import preprocess_text, read_animes_json
+from src.ranking import cos_similarity_top_results, euclidean_distance_top_results
+from src.timer import Timer
 
 # Carrega os dados do arquivo JSON e faz o pré-processamento
 
@@ -60,6 +60,7 @@ class TfIdfRanking:
 # usage example
 # anime_data = read_animes_json()
 # s_query = 'two brothers enter army to become alchemist'
+# # print('example text:', anime_data[1][0])
 # ranking = TfIdfRanking(anime_data[0], anime_data[1]).search(
-#     s_query, 'cosine')
+#     s_query, 'euclidean')
 # print('\n', ranking)

@@ -1,10 +1,10 @@
 import numpy as np
 import json
 import os
-from timer import Timer
+from src.timer import Timer
 from gensim.models import Word2Vec, KeyedVectors
-from ranking import cos_similarity_top_results, euclidean_distance_top_results
-from preprocess import preprocess_text, read_animes_json
+from src.ranking import cos_similarity_top_results, euclidean_distance_top_results
+from src.preprocess import preprocess_text, read_animes_json
 
 
 def train_model(vector_size=200):
@@ -124,5 +124,5 @@ class WordToVecRanking:
 # anime_data = read_animes_json()
 # s_query = 'two brothers enter army to become alchemist'
 # ranking = WordToVecRanking(
-#     anime_data[0], anime_data[1]).search(s_query, 'euclidean')
+#     anime_data[0], anime_data[1]).search(s_query, 'cosine')
 # print(ranking)

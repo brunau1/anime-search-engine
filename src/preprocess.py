@@ -1,13 +1,19 @@
 import os
+import re
 import json
 import nltk
+import string
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
+nltk.download('stopwords')
 nltk.download('punkt')
 
 
-def preprocess_text(text):
+def preprocess_text(text=''):
+
+    # Remove pontuação
+    text = text.translate(str.maketrans('', '', string.punctuation))
     # Tokenização
     tokens = word_tokenize(text.lower())
 
@@ -24,6 +30,7 @@ def preprocess_text(text):
 
 
 def read_animes_json():
+    print('Reading animes.json...')
     animes_file_path = os.path.abspath(os.path.join(
         os.path.dirname(__file__), '..', 'public', 'animes.json'))
 
@@ -33,7 +40,10 @@ def read_animes_json():
     names = data['names']  # array com os títulos dos textos
     content = data['content']  # array com os textos
 
+    print('preprocessing text...')
+
     processed_content = [
-        preprocess_text(text) for text in content]
+        word_tokenize(re.sub(r'[.,"\'-?:!;]', '', names[i].lower())) + preprocess_text(text.lower()) for i, text in enumerate(content)
+    ]
 
     return names, processed_content
