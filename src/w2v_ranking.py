@@ -1,10 +1,17 @@
 import numpy as np
 import json
 import os
-from src.timer import Timer
 from gensim.models import Word2Vec, KeyedVectors
+
+# from timer import Timer
+# from ranking import cos_similarity_top_results, euclidean_distance_top_results
+# from preprocess import preprocess_text, read_animes_json, simple_preprocess_text
+
+from src.timer import Timer
 from src.ranking import cos_similarity_top_results, euclidean_distance_top_results
-from src.preprocess import preprocess_text, read_animes_json
+from src.preprocess import preprocess_text, read_animes_json, simple_preprocess_text
+
+VECTOR_SIZE = 200
 
 
 def train_model(vector_size=200):
@@ -18,19 +25,18 @@ def train_model(vector_size=200):
     content = data['content']  # array com os textos
 
     # Aplica o pré-processamento nos textos
-    processed_content = [preprocess_text(text) for text in content]
+    processed_content = [simple_preprocess_text(text) for text in content]
 
     print('Data loaded. Number of texts: ', len(processed_content))
     # Treina o modelo Word2Vec
 
     # Cria o modelo Word2Vec
     # configurações do modelo com base em https://radimrehurek.com/gensim/models/word2vec.html
-    model = Word2Vec(min_count=1,
-                     window=3,
-                     vector_size=vector_size,
+    model = Word2Vec(vector_size=vector_size,
                      sample=6e-5,
                      alpha=0.03,
-                     min_alpha=0.007)
+                     min_alpha=0.007,
+                     workers=4)
 
     model.build_vocab(processed_content)
 
@@ -70,9 +76,10 @@ def build_text_vectors(processed_content, model, vector_size):
 def search(query, names, text_vectors, model, vector_size, top_k=10, similarity_method='cosine'):
     t = Timer()
     t.start()
-    print('Searching for: "', query, '" using', similarity_method, 'similarity')
+    print('Searching for: "', query, '" using',
+          similarity_method, 'similarity')
     # Pré-processa a consulta
-    processed_query = preprocess_text(query)
+    processed_query = simple_preprocess_text(query)
 
     # Converte a consulta para um vetor Word2Vec
     query_vector = np.zeros(vector_size)
@@ -85,8 +92,8 @@ def search(query, names, text_vectors, model, vector_size, top_k=10, similarity_
     ranking = []
 
     if similarity_method == 'cosine':
-    # Redimensiona o vetor da consulta para que
-    # ele possa ser usado na função cosine_similarity
+        # Redimensiona o vetor da consulta para que
+        # ele possa ser usado na função cosine_similarity
         query_vector = query_vector.reshape(1, -1)
 
         ranking = cos_similarity_top_results(
@@ -101,12 +108,13 @@ def search(query, names, text_vectors, model, vector_size, top_k=10, similarity_
 
 
 class WordToVecRanking:
-    def __init__(self, names, processed_content):
+    def __init__(self, names, sinopsis):
         self.names = names  # array com os títulos dos textos
 
-        self.processed_content = processed_content
+        self.processed_content = [simple_preprocess_text(text) for text in sinopsis]
 
-        self.vector_size = 200  # Define o tamanho dos vetores de saída do modelo Word2Vec
+        # Define o tamanho dos vetores de saída do modelo Word2Vec
+        self.vector_size = VECTOR_SIZE
 
         w2v_model_file_path = os.path.abspath(os.path.join(
             os.path.dirname(__file__), '..', 'public', 'word2vec.model'))
@@ -126,3 +134,5 @@ class WordToVecRanking:
 # ranking = WordToVecRanking(
 #     anime_data[0], anime_data[1]).search(s_query, 'cosine')
 # print(ranking)
+
+# train_model()

@@ -7,11 +7,11 @@ class SearchEngine:
     def __init__(self):
         anime_data = read_animes_json()
 
-        names = anime_data[0]
-        processed_content = anime_data[1]
+        titles = anime_data[0]
+        sinopsis = anime_data[1]
 
-        self.tfidf_core = TfIdfRanking(names, processed_content)
-        self.w2v_core = WordToVecRanking(names, processed_content)
+        self.tfidf_core = TfIdfRanking(titles, sinopsis)
+        self.w2v_core = WordToVecRanking(titles, sinopsis)
 
     def search(self, query, embedding_method='tfidf', similarity_method='cosine', rank_count=10):
         if embedding_method == 'tfidf':

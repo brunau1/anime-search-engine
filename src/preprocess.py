@@ -2,7 +2,6 @@ import os
 import re
 import json
 import nltk
-import string
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
@@ -10,16 +9,31 @@ nltk.download('stopwords')
 nltk.download('punkt')
 
 
+def simple_preprocess_text(text=''):
+    stop_words = set(stopwords.words('english'))
+    # Converte para minúsculas
+    text = text.lower()
+    # Remove caracteres especiais e números
+    text = re.sub(r'[^a-z ]+', '', text)
+    # Tokenização
+    tokens = word_tokenize(text)
+    # Remove stop words
+    tokens = [token for token in tokens if token not in stop_words]
+    return tokens
+
+
 def preprocess_text(text=''):
+    stop_words = set(stopwords.words('english'))
+    # Converte para minúsculas
+    text = text.lower()
 
     # Remove pontuação
-    text = text.translate(str.maketrans('', '', string.punctuation))
+    text = re.sub(r'[^a-z ]+', '', text)
     # Tokenização
-    tokens = word_tokenize(text.lower())
+    tokens = word_tokenize(text)
 
     # Remoção de stopwords
-    stoplist = stopwords.words('english')
-    tokens = [token for token in tokens if token not in stoplist]
+    tokens = [token for token in tokens if token not in stop_words]
 
     # Stemming
     stemmer = SnowballStemmer('english')
@@ -40,10 +54,10 @@ def read_animes_json():
     names = data['names']  # array com os títulos dos textos
     content = data['content']  # array com os textos
 
-    print('preprocessing text...')
+    print('adding titles to memory...')
 
-    processed_content = [
-        word_tokenize(re.sub(r'[.,"\'-?:!;]', '', names[i].lower())) + preprocess_text(text.lower()) for i, text in enumerate(content)
-    ]
+    for i, text in enumerate(content):
+        curr_title = names[i]
+        content[i] = text + ' ' + curr_title
 
-    return names, processed_content
+    return names, content

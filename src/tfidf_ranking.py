@@ -1,5 +1,5 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
-from src.preprocess import preprocess_text, read_animes_json
+from src.preprocess import preprocess_text, read_animes_json, simple_preprocess_text
 from src.ranking import cos_similarity_top_results, euclidean_distance_top_results
 from src.timer import Timer
 
@@ -50,7 +50,8 @@ def get_similarity_ranking(query, anime_data, rank_count=10, similarity_method='
 
 
 class TfIdfRanking:
-    def __init__(self, names, processed_content):
+    def __init__(self, names, sinopsis):
+        processed_content = [preprocess_text(text) for text in sinopsis]
         self.anime_data = load_tfidf_vectors(names, processed_content)
 
     def search(self, query, similarity_method, rank_count=10):
