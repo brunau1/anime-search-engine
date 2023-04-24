@@ -1,5 +1,10 @@
 from preprocess import read_animes_json
 from w2v_ranking import WordToVecRanking
+from sklearn.metrics.pairwise import cosine_similarity
+from tqdm import tqdm
+import numpy as np
+import os
+import re
 
 
 anime_data = read_animes_json()
