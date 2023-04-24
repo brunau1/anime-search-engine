@@ -20,6 +20,11 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 torch.cuda.empty_cache()
 # torch.cuda.reset_max_memory_allocated()
 
+# top params to tune for bert model
+# bert_lr = 2e-5
+# max_len = 96
+# train_set_size = 1000
+
 bert_lr = 2e-5
 max_len = 96
 train_set_size = 1000
