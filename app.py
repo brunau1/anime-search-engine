@@ -16,7 +16,8 @@ def search():
     similarity_method = request.args['similarity_method']
     rank_count = int(request.args['rank_count'])
 
-    ranking = s_engine.search(text, embedding_method, similarity_method, rank_count)
+    ranking = s_engine.search(text, embedding_method,
+                              similarity_method, rank_count)
 
     response = {
         'ranking': ranking

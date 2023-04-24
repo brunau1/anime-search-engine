@@ -1,15 +1,18 @@
 import numpy as np
 import json
 import os
+import re
+from tqdm import tqdm
 from gensim.models import Word2Vec, KeyedVectors
+from sklearn.metrics.pairwise import cosine_similarity
 
-# from timer import Timer
-# from ranking import cos_similarity_top_results, euclidean_distance_top_results
-# from preprocess import preprocess_text, read_animes_json, simple_preprocess_text
+from timer import Timer
+from ranking import cos_similarity_top_results, euclidean_distance_top_results
+from preprocess import preprocess_text, read_animes_json, simple_preprocess_text
 
-from src.timer import Timer
-from src.ranking import cos_similarity_top_results, euclidean_distance_top_results
-from src.preprocess import preprocess_text, read_animes_json, simple_preprocess_text
+# from src.timer import Timer
+# from src.ranking import cos_similarity_top_results, euclidean_distance_top_results
+# from src.preprocess import preprocess_text, read_animes_json, simple_preprocess_text
 
 VECTOR_SIZE = 200
 
@@ -43,6 +46,7 @@ def train_model(vector_size=200):
     print('Training model...')
     t = Timer()
     t.start()
+
     model.train(processed_content, total_examples=len(
         processed_content), epochs=300)
 
@@ -111,7 +115,8 @@ class WordToVecRanking:
     def __init__(self, names, sinopsis):
         self.names = names  # array com os títulos dos textos
 
-        self.processed_content = [simple_preprocess_text(text) for text in sinopsis]
+        self.processed_content = [
+            simple_preprocess_text(text) for text in sinopsis]
 
         # Define o tamanho dos vetores de saída do modelo Word2Vec
         self.vector_size = VECTOR_SIZE
@@ -119,6 +124,7 @@ class WordToVecRanking:
         w2v_model_file_path = os.path.abspath(os.path.join(
             os.path.dirname(__file__), '..', 'public', 'word2vec.model'))
 
+        print('Loading model from: ', w2v_model_file_path)
         self.model = KeyedVectors.load(w2v_model_file_path)
 
         self.text_vectors = build_text_vectors(
@@ -129,10 +135,93 @@ class WordToVecRanking:
 
 
 # usage example
-# anime_data = read_animes_json()
-# s_query = 'two brothers enter army to become alchemist'
+anime_data = read_animes_json()
+s_query = 'two brothers enter army to become alchemist'
 # ranking = WordToVecRanking(
-#     anime_data[0], anime_data[1]).search(s_query, 'cosine')
+#     anime_data[0], anime_data[1])
 # print(ranking)
+text_vectors = WordToVecRanking(
+    anime_data[0][:1000], anime_data[1][:1000]).text_vectors
+
+higger_cosine_similarities = []
+mean_cosine_similarities = []
+# # Calcula a similaridade entre o texto atual e todos os demais
+for i, _ in tqdm(enumerate(text_vectors)):
+    curr_text = re.sub(r'[^a-z ]+', '', anime_data[1][i].lower())
+
+    if len(curr_text.split()) > 96:
+        sim = cosine_similarity([text_vectors[i]], text_vectors).flatten()
+        most_similar_idx = sim.argsort()[
+            ::-1][1]
+        mean_similar_idx = sim.argsort()[::-1][len(sim)//4]
+
+        if sim[most_similar_idx] < 0.92:
+            higger_cosine_similarities.append(
+                [i, most_similar_idx, round(sim[most_similar_idx], 4)])
+
+        mean_cosine_similarities.append(
+            [i, mean_similar_idx, round(sim[mean_similar_idx], 4)])
+
+        # print('Text: ', i, 'Most similar: ', most_similar_idx,
+        #       'Similarity: ', sim[most_similar_idx])
+
+higger_sim_values = np.argsort([score[2]
+                               for score in higger_cosine_similarities])[::-1]
+
+higger_mean_sim_values = np.argsort([score[2]
+                                    for score in mean_cosine_similarities])[::-1]
+
+# print('Higger cosine similarities: ', higger_cosine_similarities[:5])
+# print('Mean cosine similarities: ', mean_cosine_similarities[:5])
+# print('Higger sim values len: ', len(higger_sim_values))
+# print('similar texts: ', anime_data[1][708], "\nthe second -----: ", anime_data[1][719])
+
+final_similarities = []
+
+for i, _ in enumerate(higger_cosine_similarities):
+    if i % 2 == 0:
+        final_similarities.append(
+            higger_cosine_similarities[higger_sim_values[i]])
+    elif i % 3 == 0:
+        final_similarities.append(
+            mean_cosine_similarities[higger_mean_sim_values[i]])
+    else:
+        final_similarities.append(
+            mean_cosine_similarities[i])
+
+print('Final similarities: ', len(final_similarities))
+print('Final similarities ex: ', final_similarities[:10])
+
+public_path = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), '..', 'public'))
+
+np.save(os.path.join(public_path, 'dataset',
+        'similarities.npy'), final_similarities)
+
+loaded = np.load(os.path.join(public_path, 'dataset', 'similarities.npy'))
+
+print('Similarities saved shape: ', loaded.shape)
+# para cada texto ate a metade do array de textos
+# calcula a similaridade entre o texto atual e todos os demais não só ate a metade do array
+# seleciona o indice do texto com maior similaridade com o texto atual ou
+# seleciona o indice do texto com menor similaridade com o texto atual ou
+# seleciona o indice do texto com similaridade media com o texto atual
+# salva os indices dos textos e a similaridade calculada em um array
+
+
+# half_vectors1 = text_vectors[:len(text_vectors)//2]
+# half_vectors2 = text_vectors[len(text_vectors)//2:]
+
+# cosine_similarities = []
+
+# for i, _ in enumerate(half_vectors1):
+#     cosine_similarities.append(cosine_similarity(
+#         [half_vectors1[i]], [half_vectors2[i]]).flatten()[0])
+
+# print(len(cosine_similarities))
+
+# results = np.argsort(cosine_similarities)[:10]
+
+# print(results)
 
 # train_model()
