@@ -84,9 +84,10 @@ for text in documents:
 # Define the search phrase and list of texts
 # search_phrase = "the zodiacs are the main focus of the anime"
 # search_phrase = "the volleyball team is the main focus of the anime"
-# search_phrase = "a fighter from another world who wants to become the strongest saian"
+# search_phrase = "become the strongest man of the world just training"
+search_phrase = "it has a dragon wich give three wishes to the one who find it"
 # search_phrase = "two brothers enter army to become alchemist"
-search_phrase = "a ninja boy who wants to become the leader of his village"
+# search_phrase = "a ninja boy who wants to become the leader of his village"
 # search_phrase = "give me an anime about giant robots"
 # search_phrase = "the protagonist dies and reincarnates as a slime"
 
