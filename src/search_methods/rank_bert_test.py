@@ -1,10 +1,10 @@
 
-from preprocess import read_animes_json
 import os
 import re
 import torch
 import numpy
 from tqdm import tqdm
+from services.preprocess import read_animes_json
 from transformers import BertModel, BertTokenizer
 from scipy.spatial.distance import euclidean
 from sklearn.metrics.pairwise import cosine_similarity

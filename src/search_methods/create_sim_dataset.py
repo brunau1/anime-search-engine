@@ -1,23 +1,28 @@
-from preprocess import read_animes_json
-from w2v_ranking import WordToVecRanking
-from sklearn.metrics.pairwise import cosine_similarity
-from tqdm import tqdm
-import numpy as np
-import os
 import re
+import os
+import numpy as np
+from tqdm import tqdm
+from sklearn.metrics.pairwise import cosine_similarity
 
+from w2v_ranking import WordToVecRanking
+from services.preprocess import read_animes_json
 
-anime_data = read_animes_json()
-s_query = 'two brothers enter army to become alchemist'
-# ranking = WordToVecRanking(
-#     anime_data[0], anime_data[1])
-# print(ranking)
+animes_file_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes.json'))
+
+train_set_size = 1000
+anime_data = read_animes_json(animes_file_path)
+
 text_vectors = WordToVecRanking(
-    anime_data[0][:1000], anime_data[1][:1000]).text_vectors
+    anime_data[0][:], anime_data[1][:]).text_vectors
+
+# text_vectors = WordToVecRanking(
+#     anime_data[0][:train_set_size], anime_data[1][:train_set_size]).text_vectors
 
 higger_cosine_similarities = []
 mean_cosine_similarities = []
-# # Calcula a similaridade entre o texto atual e todos os demais
+
+# Calcula a similaridade entre o texto atual e todos os demais
 for i, _ in tqdm(enumerate(text_vectors)):
     curr_text = re.sub(r'[^a-z ]+', '', anime_data[1][i].lower())
 
@@ -45,8 +50,6 @@ higger_mean_sim_values = np.argsort([score[2]
 
 # print('Higger cosine similarities: ', higger_cosine_similarities[:5])
 # print('Mean cosine similarities: ', mean_cosine_similarities[:5])
-# print('Higger sim values len: ', len(higger_sim_values))
-# print('similar texts: ', anime_data[1][708], "\nthe second -----: ", anime_data[1][719])
 
 final_similarities = []
 
@@ -65,7 +68,7 @@ print('Final similarities: ', len(final_similarities))
 print('Final similarities ex: ', final_similarities[:10])
 
 public_path = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '..', 'public'))
+    os.path.dirname(__file__), '..', '..', 'public'))
 
 np.save(os.path.join(public_path, 'dataset',
         'similarities.npy'), final_similarities)

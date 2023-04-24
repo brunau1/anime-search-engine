@@ -1,6 +1,6 @@
-from src.preprocess import read_animes_json
-from src.tfidf_ranking import TfIdfRanking
-from src.w2v_ranking import WordToVecRanking
+from services.preprocess import read_animes_json
+from tf_idf.tfidf_ranking import TfIdfRanking
+from w2v.w2v_ranking import WordToVecRanking
 
 
 class SearchEngine:

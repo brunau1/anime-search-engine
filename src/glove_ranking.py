@@ -14,7 +14,7 @@ from keras.preprocessing.text import Tokenizer
 from keras.utils import pad_sequences
 from nltk.tokenize import word_tokenize
 
-from timer import Timer
+from services.timer import Timer
 nltk.download('stopwords')
 
 # GloVe ------------------------------
