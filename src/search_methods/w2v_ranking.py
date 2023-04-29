@@ -3,13 +3,13 @@ import json
 import numpy as np
 from gensim.models import Word2Vec, KeyedVectors
 
-from services.preprocess import preprocess_text, read_animes_json, simple_preprocess_text
+from services.preprocess import simple_preprocess_text
 from services.ranking import cos_similarity_top_results, euclidean_distance_top_results
 from services.timer import Timer
 
 # from src.timer import Timer
 # from src.ranking import cos_similarity_top_results, euclidean_distance_top_results
-# from src.services.preprocess import preprocess_text, read_animes_json, simple_preprocess_text
+# from src.services.preprocess import simple_preprocess_text
 
 VECTOR_SIZE = 200
 
@@ -17,7 +17,7 @@ VECTOR_SIZE = 200
 def train_model(vector_size=200):
     # Carrega os dados
     animes_file_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', 'public', 'animes.json'))
+        os.path.dirname(__file__), '..', 'public', 'dataset', 'animes.json'))
 
     with open(animes_file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -50,7 +50,7 @@ def train_model(vector_size=200):
     t.stop()
 
     w2v_model_file_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', 'public', 'word2vec.model'))
+        os.path.dirname(__file__), '..', 'public', 'models', 'word2vec.model'))
 
     model.save(w2v_model_file_path)
 

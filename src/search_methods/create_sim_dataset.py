@@ -8,16 +8,16 @@ from w2v_ranking import WordToVecRanking
 from services.preprocess import read_animes_json
 
 animes_file_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes.json'))
+    os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes.json'))
 
-train_set_size = 1000
+train_set_size = 5000
 anime_data = read_animes_json(animes_file_path)
 
-text_vectors = WordToVecRanking(
-    anime_data[0][:], anime_data[1][:]).text_vectors
-
 # text_vectors = WordToVecRanking(
-#     anime_data[0][:train_set_size], anime_data[1][:train_set_size]).text_vectors
+#     anime_data[0][:], anime_data[1][:]).text_vectors
+
+text_vectors = WordToVecRanking(
+    anime_data[0][:train_set_size], anime_data[1][:train_set_size]).text_vectors
 
 higger_cosine_similarities = []
 mean_cosine_similarities = []
@@ -59,10 +59,10 @@ for i, _ in enumerate(higger_cosine_similarities):
             higger_cosine_similarities[higger_sim_values[i]])
     elif i % 3 == 0:
         final_similarities.append(
-            mean_cosine_similarities[higger_mean_sim_values[i]])
+            mean_cosine_similarities[i])
     else:
         final_similarities.append(
-            mean_cosine_similarities[i])
+            mean_cosine_similarities[higger_mean_sim_values[i]])
 
 print('Final similarities: ', len(final_similarities))
 print('Final similarities ex: ', final_similarities[:10])

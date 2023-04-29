@@ -16,10 +16,13 @@ torch.cuda.empty_cache()
 # torch.cuda.reset_max_memory_allocated()
 
 # top params to tune for bert model
+# epochs = 4
 # bert_lr = 2e-5
 # max_len = 96
 # train_set_size = 1000
+# test_text_pairs_similarities = 697
 
+epochs = 4
 bert_lr = 2e-5
 max_len = 96
 train_set_size = 15444
@@ -190,7 +193,7 @@ train_dataloader = DataLoader(
 )
 
 
-print("training with", len(loaded_sim_dataset), "x 2 samples")
+print("training with", len(loaded_sim_dataset), "pair similarity samples")
 print(
     f"Max length: {max_len} | # labels: {len(labels)} -----------------")
 
@@ -198,7 +201,6 @@ print(
 # exit()
 # fine-tune the pre-trained BERT model ----------------------------------------
 t_initial = time.time()
-epochs = 4
 
 bert_model = STSBertModel()
 bert_model.cuda()
