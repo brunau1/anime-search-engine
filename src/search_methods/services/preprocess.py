@@ -9,6 +9,14 @@ nltk.download('stopwords')
 nltk.download('punkt')
 
 
+def bert_simple_preprocess_text(text=''):
+    text = text.lower()
+    # Remove caracteres especiais e números
+    text = re.sub(r'[^a-z ]+', '', text)
+
+    return text
+
+
 def simple_preprocess_text(text=''):
     stop_words = set(stopwords.words('english'))
     # Converte para minúsculas

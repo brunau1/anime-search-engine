@@ -19,13 +19,13 @@ torch.cuda.empty_cache()
 # epochs = 4
 # bert_lr = 2e-5
 # max_len = 96
-# train_set_size = 1000
+# train_set_size = 5000
 # test_text_pairs_similarities = 697
 
 epochs = 4
 bert_lr = 2e-5
-max_len = 96
-train_set_size = 15444
+max_len = 128
+train_set_size = 1000
 
 public_path = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '..', '..', 'public'))
@@ -169,7 +169,7 @@ def preprocess_text(_texts, m_len):
 # preparing the data ---------------------------------------------------------
 data = read_animes_json(os.path.join(public_path, 'dataset', 'animes.json'))
 
-texts = data[1][:train_set_size]
+texts = data[1] #[:train_set_size] # remove for full dataset
 
 # load half of the data
 texts1 = texts[:len(texts)//2]

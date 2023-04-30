@@ -10,17 +10,18 @@ from services.preprocess import read_animes_json
 animes_file_path = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes.json'))
 
-train_set_size = 5000
+train_set_size = 1000
 anime_data = read_animes_json(animes_file_path)
 
-# text_vectors = WordToVecRanking(
-#     anime_data[0][:], anime_data[1][:]).text_vectors
-
 text_vectors = WordToVecRanking(
-    anime_data[0][:train_set_size], anime_data[1][:train_set_size]).text_vectors
+    anime_data[0][:], anime_data[1][:]).text_vectors # use this for all dataset
+
+# text_vectors = WordToVecRanking(
+#     anime_data[0][:train_set_size], anime_data[1][:train_set_size]).text_vectors
 
 higger_cosine_similarities = []
 mean_cosine_similarities = []
+lower_cosine_similarities = []
 
 # Calcula a similaridade entre o texto atual e todos os demais
 for i, _ in tqdm(enumerate(text_vectors)):
@@ -30,7 +31,9 @@ for i, _ in tqdm(enumerate(text_vectors)):
         sim = cosine_similarity([text_vectors[i]], text_vectors).flatten()
         most_similar_idx = sim.argsort()[
             ::-1][1]
-        mean_similar_idx = sim.argsort()[::-1][len(sim)//4]
+        mean_similar_idx = sim.argsort()[::-1][round(len(sim)//7, 0)]
+
+        lower_similar_idx = sim.argsort()[::-1][round(len(sim)//4, 0)]
 
         if sim[most_similar_idx] < 0.92:
             higger_cosine_similarities.append(
@@ -39,6 +42,9 @@ for i, _ in tqdm(enumerate(text_vectors)):
         mean_cosine_similarities.append(
             [i, mean_similar_idx, round(sim[mean_similar_idx], 4)])
 
+        lower_cosine_similarities.append(
+            [i, lower_similar_idx, round(sim[lower_similar_idx], 4)])
+        
         # print('Text: ', i, 'Most similar: ', most_similar_idx,
         #       'Similarity: ', sim[most_similar_idx])
 
@@ -59,7 +65,7 @@ for i, _ in enumerate(higger_cosine_similarities):
             higger_cosine_similarities[higger_sim_values[i]])
     elif i % 3 == 0:
         final_similarities.append(
-            mean_cosine_similarities[i])
+            lower_cosine_similarities[i])
     else:
         final_similarities.append(
             mean_cosine_similarities[higger_mean_sim_values[i]])
