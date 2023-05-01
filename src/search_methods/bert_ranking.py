@@ -1,36 +1,35 @@
 
 import os
-import re
 import torch
-import numpy
+import numpy as np
 from tqdm import tqdm
-from services.ranking import cos_similarity_top_results, euclidean_distance_top_results
-from services.preprocess import read_animes_json, bert_simple_preprocess_text
 from transformers import BertTokenizer
 from sentence_transformers import SentenceTransformer, models
-from nltk.corpus import stopwords
-stop_words = set(stopwords.words('english'))
+# from services.preprocess import bert_simple_preprocess_text
+# from services.ranking import cos_similarity_top_results, euclidean_distance_top_results
 
+from src.search_methods.services.preprocess import bert_simple_preprocess_text
+from src.search_methods.services.ranking import cos_similarity_top_results, euclidean_distance_top_results
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-TRAIN_SET_SIZE = 5000
 
-torch.cuda.empty_cache()
 print(f"Using {DEVICE} DEVICE")
+
+MAX_LEN = 96  # was 128 and 64
 
 
 class BertRanking:
-    def __init__(self, titles, synopsis):
-        self.max_len = 96  # or 128
+    def __init__(self, titles, synopsis, bert_public_path=''):
+        torch.cuda.empty_cache()
 
-        bert_public_path = os.path.abspath(os.path.join(
-            os.path.dirname(__file__), '..', '..', 'public', 'models'))  # add 'temp' for a minor version of bert
+        bert_public_path = bert_public_path if bert_public_path != '' else os.path.abspath(os.path.join(
+            os.path.dirname(__file__), '..', '..', 'public', 'models', 'model_name'))  # add 'temp' for a minor version of bert
 
         self.tokenizer = BertTokenizer.from_pretrained(
             os.path.join(bert_public_path, 'bert_pretrained_model'), local_files_only=True)
 
         word_embedding_model = models.Transformer(
-            os.path.join(bert_public_path, 'bert_pretrained_model'), max_seq_length=self.max_len)
+            os.path.join(bert_public_path, 'bert_pretrained_model'), max_seq_length=MAX_LEN)
 
         pooling_model = models.Pooling(
             word_embedding_model.get_word_embedding_dimension())
@@ -46,8 +45,6 @@ class BertRanking:
         self.bert_model.eval()
 
         self.bert_model.to(DEVICE)
-
-        self.similarity_method = torch.nn.CosineSimilarity()
 
         self.titles = titles
 
@@ -65,7 +62,7 @@ class BertRanking:
         encoded_synopse = self.tokenizer(
             text,
             add_special_tokens=True,
-            max_length=self.max_len,
+            max_length=MAX_LEN,
             padding='max_length',
             truncation=True,
             return_tensors='pt').to(DEVICE)
@@ -91,35 +88,13 @@ class BertRanking:
         query_embedding = self.get_text_embedding(encoded_query)
 
         if similarity_method == "cosine":
-            best_similarities = cos_similarity_top_results(
+            ranking = cos_similarity_top_results(
                 query_embedding.reshape(1, -1), self.synopsis_embeddings, self.titles, top_k)
 
-        if similarity_method == "euclidean":
-            best_similarities = euclidean_distance_top_results(
-                query_embedding.reshape(1, -1), self.synopsis_embeddings, self.titles, top_k)
+            ranking = [[r[0], np.float64(r[1])] for r in ranking]
 
-        return best_similarities
+            return ranking
 
-
-public_path = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '..', '..', 'public', 'dataset'))
-
-data = read_animes_json(os.path.join(public_path, 'animes.json'))
-
-titles = data[0][:TRAIN_SET_SIZE]
-documents = data[1][:TRAIN_SET_SIZE]
-
-# Define the search phrase for a given anime
-search_phrase = "the soldiers fight to protect the goddess athena"
-# search_phrase = "the volleyball team is the main focus of the anime"
-# search_phrase = "a hero who can defeat any enemy with one punch"
-# search_phrase = "it has a dragon wich give three wishes to the one who find it"
-# search_phrase = "two brothers enter army to become alchemist"
-# search_phrase = "a ninja boy who wants to become the leader of his village"
-# search_phrase = "give me an anime about giant robots"
-# search_phrase = "the protagonist got the shinigami sword and now he has to kill hollows"
-# search_phrase = "the protagonist dies and reincarnates as a slime"
-
-rank_model = BertRanking(titles, documents)
-
-print(rank_model.search(search_phrase, "cosine", 10))
+        elif similarity_method == "euclidean":
+            return euclidean_distance_top_results(
+                query_embedding, self.synopsis_embeddings, self.titles, top_k)

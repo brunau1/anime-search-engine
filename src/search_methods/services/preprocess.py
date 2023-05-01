@@ -54,13 +54,13 @@ def preprocess_text(text=''):
 def read_animes_json(path=''):
     print('Reading animes.json...')
     animes_file_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', 'public', 'dataset', 'animes.json')) if path == '' else path
+        os.path.dirname(__file__), '..', '..', '..', 'public', 'dataset', 'animes.json')) if path == '' else path
 
     with open(animes_file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
-    names = data['names']  # array com os títulos dos textos
-    content = data['content']  # array com os textos
+    names = data['names'][:100]  # array com os títulos dos textos
+    content = data['content'][:100]  # array com os textos
 
     print('adding titles to memory...')
 

@@ -22,6 +22,7 @@ def search():
     response = {
         'ranking': ranking
     }
+    print(response)
 
     return jsonify(response)
 

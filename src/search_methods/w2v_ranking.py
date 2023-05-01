@@ -3,13 +3,13 @@ import json
 import numpy as np
 from gensim.models import Word2Vec, KeyedVectors
 
-from services.preprocess import simple_preprocess_text
-from services.ranking import cos_similarity_top_results, euclidean_distance_top_results
-from services.timer import Timer
+# from services.preprocess import simple_preprocess_text
+# from services.ranking import cos_similarity_top_results, euclidean_distance_top_results
+# from services.timer import Timer
 
-# from src.timer import Timer
-# from src.ranking import cos_similarity_top_results, euclidean_distance_top_results
-# from src.services.preprocess import simple_preprocess_text
+from src.search_methods.services.timer import Timer
+from src.search_methods.services.ranking import cos_similarity_top_results, euclidean_distance_top_results
+from src.search_methods.services.preprocess import simple_preprocess_text
 
 VECTOR_SIZE = 200
 

@@ -22,16 +22,8 @@ torch.cuda.empty_cache()
 # train_set_size = 5000
 # test_text_pairs_similarities = 697
 
-epochs = 4
-bert_lr = 2e-5
-max_len = 128
-train_set_size = 1000
-
 public_path = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '..', '..', 'public'))
-
-loaded_sim_dataset = numpy.load(os.path.join(
-    public_path, 'dataset', 'similarities.npy')).tolist()
 
 print(f"Using {device} device")
 
@@ -114,15 +106,7 @@ def format_time(elapsed):
     return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
-def get_max_len(texts):
-    max_len = 0
-    for text in texts:
-        input_ids = tokenizer.encode(text, add_special_tokens=True)
-        max_len = max(max_len, len(input_ids))
-    return max_len
-
-
-def preprocess_text(_texts, m_len):
+def preprocess_text(_texts, loaded_sim_dataset, m_len):
     curr_labels = []
     input_ids1 = []
     input_ids2 = []
@@ -169,99 +153,103 @@ def preprocess_text(_texts, m_len):
 # preparing the data ---------------------------------------------------------
 data = read_animes_json(os.path.join(public_path, 'dataset', 'animes.json'))
 
-texts = data[1] #[:train_set_size] # remove for full dataset
+texts = data[1]  # [:train_set_size] # remove for full dataset
 
 # load half of the data
 texts1 = texts[:len(texts)//2]
 texts2 = texts[len(texts)//2:]
 
-train_input_ids1, train_input_ids2, train_attention_masks1, train_attention_masks2, labels = preprocess_text(
-    texts, max_len)
 
-dataset = TextSimilarityDataset(train_input_ids1, train_input_ids2,
-                                train_attention_masks1, train_attention_masks2, labels, max_len)
+def train_model(epochs, bert_lr, data, max_len, train_set_size, sim_set_name, out_path):
+    curr_texts = data[1][:train_set_size]
 
-train_size = int(len(dataset))
-val_size = len(dataset) - train_size
+    loaded_sim_dataset = numpy.load(sim_set_name).tolist()
 
-batch_size = 32
+    train_input_ids1, train_input_ids2, train_attention_masks1, train_attention_masks2, labels = preprocess_text(
+        curr_texts, loaded_sim_dataset, max_len)
 
-train_dataloader = DataLoader(
-    dataset,
-    sampler=RandomSampler(dataset),
-    batch_size=batch_size,
-)
+    dataset = TextSimilarityDataset(train_input_ids1, train_input_ids2,
+                                    train_attention_masks1, train_attention_masks2, labels, max_len)
 
+    batch_size = 32
 
-print("training with", len(loaded_sim_dataset), "pair similarity samples")
-print(
-    f"Max length: {max_len} | # labels: {len(labels)} -----------------")
+    train_dataloader = DataLoader(
+        dataset,
+        sampler=RandomSampler(dataset),
+        batch_size=batch_size,
+    )
 
-
-# exit()
-# fine-tune the pre-trained BERT model ----------------------------------------
-t_initial = time.time()
-
-bert_model = STSBertModel()
-bert_model.cuda()
-
-criterion = CosineSimilarityLoss()
-optimizer = torch.optim.Adam(bert_model.parameters(), lr=bert_lr)
-
-progress_bar = tqdm(range(0, epochs), desc="Training", position=0)
-
-criterion.cuda()
-
-for epoch in progress_bar:
-
-    epoch_time = time.time()
-    total_loss_train = 0
-
-    for step, batch in enumerate(train_dataloader):
-
-        b_input_ids1, b_input_ids2, b_input_masks1, b_input_masks2, b_labels = batch
-
-        for i, _ in enumerate(b_input_ids1):
-
-            output1, output2 = bert_model(b_input_ids1[i].to(device), b_input_masks1[i].to(device),
-                                          b_input_ids2[i].to(device), b_input_masks2[i].to(device))
-
-            output = [output1['sentence_embedding'],
-                      output2['sentence_embedding']]
-
-            curr_label = torch.Tensor([b_labels[i]]).to(
-                device=device, dtype=torch.float32)
-
-            loss = criterion(output, curr_label)
-            total_loss_train += loss.item()
-
-            progress_bar.set_postfix(
-                {"info": f"Epoch {epoch+1}/{epochs} ~ T loss: {total_loss_train/len(dataset):.4f} - {loss.item():.4f} | step {step} of {len(train_dataloader)}"})
-            progress_bar.update()
-
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-
+    print("training with", len(loaded_sim_dataset), "pair similarity samples")
     print(
-        f"Epoch {epoch} of {epochs} took {format_time(time.time() - epoch_time)}s")
-    bert_model.train()
+        f"Max length: {max_len} | # labels: {len(labels)} -----------------")
+
+    # exit()
+    # fine-tune the pre-trained BERT model ----------------------------------------
+    t_initial = time.time()
+
+    bert_model = STSBertModel()
+    bert_model.cuda()
+
+    criterion = CosineSimilarityLoss()
+    optimizer = torch.optim.Adam(bert_model.parameters(), lr=bert_lr)
+
+    progress_bar = tqdm(range(0, epochs), desc="Training", position=0)
+
+    criterion.cuda()
+
+    for epoch in progress_bar:
+
+        epoch_time = time.time()
+        total_loss_train = 0
+
+        for step, batch in enumerate(train_dataloader):
+
+            b_input_ids1, b_input_ids2, b_input_masks1, b_input_masks2, b_labels = batch
+
+            for i, _ in enumerate(b_input_ids1):
+
+                output1, output2 = bert_model(b_input_ids1[i].to(device), b_input_masks1[i].to(device),
+                                              b_input_ids2[i].to(device), b_input_masks2[i].to(device))
+
+                output = [output1['sentence_embedding'],
+                          output2['sentence_embedding']]
+
+                curr_label = torch.Tensor([b_labels[i]]).to(
+                    device=device, dtype=torch.float32)
+
+                loss = criterion(output, curr_label)
+                total_loss_train += loss.item()
+
+                progress_bar.set_postfix(
+                    {"info": f"Epoch {epoch+1}/{epochs} ~ T loss: {total_loss_train/len(dataset):.4f} - {loss.item():.4f} | step {step} of {len(train_dataloader)}"})
+                progress_bar.update()
+
+                loss.backward()
+                optimizer.step()
+                optimizer.zero_grad()
+
+        print(
+            f"Epoch {epoch} of {epochs} took {format_time(time.time() - epoch_time)}s")
+        bert_model.train()
+
+    # Measure how long this epoch took.
+    training_time = format_time(time.time() - t_initial)
+
+    print(f"Total training time: {training_time}")
+
+    # save the trained bert_model
+    bert_public_path = os.path.abspath(os.path.join(
+        public_path, 'models', out_path))
+
+    bert_model.sts_model.save(os.path.join(
+        bert_public_path, 'bert_pretrained_model'))
+
+    tokenizer.save_pretrained(os.path.join(
+        bert_public_path, 'bert_pretrained_tokenizer'))
+
+    torch.save(bert_model.state_dict(), os.path.join(
+        bert_public_path, 'bert_sts_model.pth'))
 
 
-# Measure how long this epoch took.
-training_time = format_time(time.time() - t_initial)
-
-print(f"Total training time: {training_time}")
-
-# save the trained bert_model
-bert_public_path = os.path.abspath(os.path.join(
-    public_path, 'models'))
-
-bert_model.sts_model.save(os.path.join(
-    bert_public_path, 'bert_pretrained_model'))
-
-tokenizer.save_pretrained(os.path.join(
-    bert_public_path, 'bert_pretrained_tokenizer'))
-
-torch.save(bert_model.state_dict(), os.path.join(
-    bert_public_path, 'bert_sts_model.pth'))
+# train_model(epochs=4, bert_lr=2e-5, data=data, max_len=128,
+#             train_set_size=1000, sim_set_name='sim_set_1000.npy', out_path='bert_1000')

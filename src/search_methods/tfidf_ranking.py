@@ -1,8 +1,10 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
-from services.preprocess import preprocess_text, read_animes_json, simple_preprocess_text
-from services.ranking import cos_similarity_top_results, euclidean_distance_top_results
-from services.timer import Timer
-
+# from services.preprocess import preprocess_text
+# from services.ranking import cos_similarity_top_results, euclidean_distance_top_results
+# from services.timer import Timer
+from src.search_methods.services.timer import Timer
+from src.search_methods.services.preprocess import preprocess_text
+from src.search_methods.services.ranking import cos_similarity_top_results, euclidean_distance_top_results
 # Carrega os dados do arquivo JSON e faz o pré-processamento
 
 
