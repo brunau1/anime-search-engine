@@ -5,22 +5,22 @@ import numpy as np
 from tqdm import tqdm
 from transformers import BertTokenizer
 from sentence_transformers import SentenceTransformer, models
-# from services.preprocess import bert_simple_preprocess_text
-# from services.ranking import cos_similarity_top_results, euclidean_distance_top_results
 
-from src.search_methods.services.preprocess import bert_simple_preprocess_text
-from src.search_methods.services.ranking import cos_similarity_top_results, euclidean_distance_top_results
+from services.preprocess import bert_simple_preprocess_text
+from services.ranking import cos_similarity_top_results, euclidean_distance_top_results
+# from src.search_methods.services.preprocess import bert_simple_preprocess_text
+# from src.search_methods.services.ranking import cos_similarity_top_results, euclidean_distance_top_results
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 print(f"Using {DEVICE} DEVICE")
 
-MAX_LEN = 96  # was 128 and 64
-
 
 class BertRanking:
-    def __init__(self, titles, synopsis, bert_public_path=''):
+    def __init__(self, titles, synopsis, max_len=96, bert_public_path='', device=DEVICE):
         torch.cuda.empty_cache()
+        self.max_len = max_len
+        self.device = device
 
         bert_public_path = bert_public_path if bert_public_path != '' else os.path.abspath(os.path.join(
             os.path.dirname(__file__), '..', '..', 'public', 'models', 'model_name'))  # add 'temp' for a minor version of bert
@@ -29,7 +29,7 @@ class BertRanking:
             os.path.join(bert_public_path, 'bert_pretrained_model'), local_files_only=True)
 
         word_embedding_model = models.Transformer(
-            os.path.join(bert_public_path, 'bert_pretrained_model'), max_seq_length=MAX_LEN)
+            os.path.join(bert_public_path, 'bert_pretrained_model'), max_seq_length=self.max_len)
 
         pooling_model = models.Pooling(
             word_embedding_model.get_word_embedding_dimension())
@@ -44,7 +44,7 @@ class BertRanking:
 
         self.bert_model.eval()
 
-        self.bert_model.to(DEVICE)
+        self.bert_model.to(self.device)
 
         self.titles = titles
 
@@ -62,17 +62,17 @@ class BertRanking:
         encoded_synopse = self.tokenizer(
             text,
             add_special_tokens=True,
-            max_length=MAX_LEN,
+            max_length=self.max_len,
             padding='max_length',
             truncation=True,
-            return_tensors='pt').to(DEVICE)
+            return_tensors='pt').to(self.device)
 
         return encoded_synopse
 
     def get_text_embedding(self, encoded_text):
         with torch.no_grad():
-            input_ids = encoded_text["input_ids"].to(DEVICE)
-            mask = encoded_text["attention_mask"].to(DEVICE)
+            input_ids = encoded_text["input_ids"].to(self.device)
+            mask = encoded_text["attention_mask"].to(self.device)
             params = {'input_ids': input_ids,
                       'attention_mask': mask}
 
