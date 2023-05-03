@@ -59,8 +59,8 @@ def read_animes_json(path=''):
     with open(animes_file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
-    names = data['names'][:100]  # array com os títulos dos textos
-    content = data['content'][:100]  # array com os textos
+    names = data['names']  # array com os títulos dos textos
+    content = data['content']  # array com os textos
 
     print('adding titles to memory...')
 
