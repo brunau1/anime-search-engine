@@ -20,10 +20,10 @@ animes_file_path = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes.json'))
 
 train_data_path = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'train_dataset_V4.json'))
+    os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'train_dataset_V5.json'))
 
 bert_trained_model_path = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '..', '..', 'public', 'models', 'bert_trained_model__v4'))
+    os.path.dirname(__file__), '..', '..', 'public', 'models', 'bert_trained_model__v5'))
 
 with open(animes_file_path, 'r', encoding='utf-8') as f:
     data = json.load(f)
@@ -74,13 +74,13 @@ for i, data in enumerate(train_data):
     train_examples.append(
         InputExample(texts=[query, text], label=label))
     # also add the inverse pair
-    # train_examples.append(
-    #     InputExample(texts=[text, query], label=label))
+    train_examples.append(
+        InputExample(texts=[text, query], label=label))
 
 print("train examples len: ", len(train_examples))
 
 # Define your train dataset, the dataloader and the train loss
-train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=32)
+train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=24)
 train_loss = losses.MultipleNegativesRankingLoss(model)
 # train_loss = losses.CosineSimilarityLoss(model)
 
