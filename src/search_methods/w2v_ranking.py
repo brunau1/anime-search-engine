@@ -3,13 +3,13 @@ import json
 import numpy as np
 from gensim.models import Word2Vec, KeyedVectors
 
-# from services.preprocess import simple_preprocess_text
-# from services.ranking import cos_similarity_top_results, euclidean_distance_top_results
-# from services.timer import Timer
+from preprocess import preprocess_text, read_animes_json, preprocess_text
+from ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
+from timer import Timer
 
-from src.search_methods.services.timer import Timer
-from src.search_methods.services.ranking import cos_similarity_top_results, euclidean_distance_top_results
-from src.search_methods.services.preprocess import simple_preprocess_text
+# from src.search_methods.services.timer import Timer
+# from src.search_methods.services.ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
+# from src.search_methods.services.preprocess import preprocess_text
 
 VECTOR_SIZE = 200
 
@@ -17,7 +17,7 @@ VECTOR_SIZE = 200
 def train_model(vector_size=200):
     # Carrega os dados
     animes_file_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', 'public', 'dataset', 'animes.json'))
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes.json'))
 
     with open(animes_file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -25,15 +25,14 @@ def train_model(vector_size=200):
     content = data['content']  # array com os textos
 
     # Aplica o pré-processamento nos textos
-    processed_content = [simple_preprocess_text(text) for text in content]
+    processed_content = [preprocess_text(
+        text) for text in content if len(text.split()) > 40]
 
     print('Data loaded. Number of texts: ', len(processed_content))
-    # Treina o modelo Word2Vec
-
-    # Cria o modelo Word2Vec
-    # configurações do modelo com base em https://radimrehurek.com/gensim/models/word2vec.html
-    model = Word2Vec(vector_size=vector_size,
-                     sample=6e-5,
+    model = Word2Vec(min_count=1, # 3
+                     window=3,  # 5
+                     sample=6e-5, # 1e-5
+                     vector_size=vector_size,
                      alpha=0.03,
                      min_alpha=0.007,
                      workers=4)
@@ -50,7 +49,7 @@ def train_model(vector_size=200):
     t.stop()
 
     w2v_model_file_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', 'public', 'models', 'word2vec.model'))
+        os.path.dirname(__file__), '..', '..', 'public', 'models', 'word2vec.model'))
 
     model.save(w2v_model_file_path)
 
@@ -66,6 +65,7 @@ def build_text_vectors(processed_content, model, vector_size):
         for token in text:
             if token in model.wv:
                 text_vector = np.add(text_vector, model.wv[token])
+
         vectors.append(text_vector)
 
     print('Text vectors created. Shape: ', np.array(vectors).shape)
@@ -80,21 +80,16 @@ def search(query, names, text_vectors, model, vector_size, top_k=10, similarity_
     print('Searching for: "', query, '" using',
           similarity_method, 'similarity')
     # Pré-processa a consulta
-    processed_query = simple_preprocess_text(query)
+    processed_query = preprocess_text(query)
 
-    # Converte a consulta para um vetor Word2Vec
     query_vector = np.zeros(vector_size)
     for token in processed_query:
         if token in model.wv:
             query_vector = np.add(query_vector, model.wv[token])
 
-    # Calcula as similaridades entre a consulta e os textos
-
     ranking = []
 
     if similarity_method == 'cosine':
-        # Redimensiona o vetor da consulta para que
-        # ele possa ser usado na função cosine_similarity
         query_vector = query_vector.reshape(1, -1)
 
         ranking = cos_similarity_top_results(
@@ -108,12 +103,34 @@ def search(query, names, text_vectors, model, vector_size, top_k=10, similarity_
     return ranking
 
 
+def search_and_bleu(query, names, texts, text_vectors, model, vector_size, top_k=10):
+    t = Timer()
+    t.start()
+    print('Searching for: "', query, '"')
+    processed_query = preprocess_text(query)
+
+    query_vector = np.zeros(vector_size)
+    for token in processed_query:
+        if token in model.wv:
+            query_vector = np.add(query_vector, model.wv[token])
+
+    query_vector = query_vector.reshape(1, -1)
+
+    texts = [' '.join(text) for text in texts]
+
+    ranking = calculate_bleu_1_score_for_texts(
+        names, texts, query, query_vector, text_vectors, top_k)
+
+    t.stop()
+    return ranking
+
+
 class WordToVecRanking:
     def __init__(self, names, sinopsis):
         self.names = names  # array com os títulos dos textos
 
         self.processed_content = [
-            simple_preprocess_text(text) for text in sinopsis]
+            preprocess_text(text) for text in sinopsis]
 
         # Define o tamanho dos vetores de saída do modelo Word2Vec
         self.vector_size = VECTOR_SIZE
@@ -130,12 +147,56 @@ class WordToVecRanking:
     def search(self, query, similarity_method, top_k=10):
         return search(query, self.names, self.text_vectors, self.model, self.vector_size, top_k, similarity_method)
 
+    def search_and_bleu(self, query, top_k=10):
+        return search_and_bleu(query, self.names, self.processed_content, self.text_vectors, self.model, self.vector_size, top_k)
+
 
 # usage example
-# anime_data = read_animes_json()
-# s_query = 'two brothers enter army to become alchemist'
-# ranking = WordToVecRanking(
-#     anime_data[0], anime_data[1])
-# print(ranking)
+# search_phrases = ["the soldiers fight to protect the goddess athena",
+#                   "the protagonist is a demon who wants to become a hero",
+#                   "the protagonist gains the power to kill anyone whose name he writes in a notebook",
+#                   "a boy was possessed by a demon and now he has to fight demons",
+#                   "the anime shows a volleyball team which trains to become the best of japan",
+#                   "the anime shows the daily life of a volleyball team in high school",
+#                   "a man who can defeat any enemy with one punch",
+#                   "the protagonist become skinny just training",
+#                   "it has a dragon wich give three wishes to the one who find it",
+#                   "the protagonist always use the wishes to revive his friends",
+#                   "the philosopher stone grants immortality to the one who find it",
+#                   "two brothers lost their bodies and now they have to find the philosopher stone",
+#                   "a ninja kid who wants to become a hokage",
+#                   "the protagonist's dream is to become the pirate king",
+#                   "the protagonist uses a straw hat and can stretch his body",
+#                   "the protagonist got the shinigami sword and now he has to kill hollows",
+#                   "it was a knight who use a saint armor blessed by the goddess athena",
+#                   "the protagonist met a shinigami and goes to the soul society"]
+
+search_phrases = ["the volleyball team Karasuno High School faces off against the volleyball team of Shiratorizawa Academy in the final round of the Miyagi Prefecture qualifier tournament."]
+
+def main():
+    animes_file_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes.json'))
+
+    anime_data = read_animes_json(animes_file_path)
+
+    model = WordToVecRanking(anime_data[0], anime_data[1][:1000])
+
+    lines = []
+    for search_text in search_phrases:
+        print("search phrase: ", search_text, "\n")
+
+        ranking = model.search_and_bleu(search_text)
+        # ranking = model.search(search_text, 'cosine')
+
+        lines.append(f"'{search_text}' --> {ranking}\n")
+
+    out_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'w2v_bleu_15k.txt'))
+
+    with open(out_path, 'w', encoding='utf-8') as f:
+        for line in lines:
+            f.write(line)
+
 
 # train_model()
+main()

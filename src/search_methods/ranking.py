@@ -3,7 +3,9 @@ from nltk.translate.bleu_score import sentence_bleu
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.spatial import distance
 
-from services.preprocess import simple_preprocess_text, preprocess_text
+# from src.search_methods.services.preprocess import simple_preprocess_text, preprocess_text
+
+from preprocess import simple_preprocess_text, preprocess_text
 
 
 def cos_similarity_top_results(query_vector, text_vectors, names, top_k=10):
@@ -47,9 +49,10 @@ def euclidean_distance_top_results(query_vector, text_vectors, names, top_k=10):
 
 
 def calculate_bleu_1_score_for_texts(titles, texts, search_phrase, search_encoded, texts_embeddings, top_k=10):
-    similarity_matrix = np.inner(search_encoded, texts_embeddings)
+    similarity_matrix = cosine_similarity(
+        search_encoded, texts_embeddings).flatten()
 
-    similar_text_indices = np.argsort(similarity_matrix)[::-1]
+    similar_text_indices = similarity_matrix.argsort()[::-1]
 
     curr_scores = []
     for i in range(0, top_k):
