@@ -1,14 +1,13 @@
 import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from services.timer import Timer
-from services.preprocess import preprocess_text, read_animes_json
-from services.ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
+# from timer import Timer
+# from preprocess import preprocess_text, read_animes_json
+# from ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
 
-# from src.search_methods.services.timer import Timer
-# from src.search_methods.services.preprocess import preprocess_text, read_animes_json
-# from src.search_methods.services.ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
-# Carrega os dados do arquivo JSON e faz o pré-processamento
+from src.search_methods.timer import Timer
+from src.search_methods.preprocess import preprocess_text, read_animes_json
+from src.search_methods.ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
 
 
 def load_tfidf_vectors(names, processed_content):
@@ -81,35 +80,3 @@ class TfIdfRanking:
 
     def search_bleu(self, query, rank_count=10):
         return get_bleu_ranking(query, self.anime_data, rank_count)
-
-
-# usage example
-search_phrases = ["it was a knight who use a saint armor blessed by the goddess athena"]
-
-
-def main():
-    animes_file_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes.json'))
-
-    anime_data = read_animes_json(animes_file_path)
-
-    model = TfIdfRanking(anime_data[0], anime_data[1])
-
-    lines = []
-    for search_text in search_phrases:
-        print("search phrase: ", search_text, "\n")
-
-        ranking = model.search_bleu(search_text)
-        # ranking = model.search(search_text, 'cosine')
-
-        lines.append(f"'{search_text}' --> \n{ranking}\n")
-
-    out_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'tf_idf_bleu_15k.txt'))
-
-    with open(out_path, 'w', encoding='utf-8') as f:
-        for line in lines:
-            f.write(line)
-
-
-main()

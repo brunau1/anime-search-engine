@@ -3,9 +3,9 @@ from nltk.translate.bleu_score import sentence_bleu
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.spatial import distance
 
-# from src.search_methods.services.preprocess import simple_preprocess_text, preprocess_text
+from src.search_methods.preprocess import simple_preprocess_text, preprocess_text
 
-from preprocess import simple_preprocess_text, preprocess_text
+# from preprocess import simple_preprocess_text, preprocess_text
 
 
 def cos_similarity_top_results(query_vector, text_vectors, names, top_k=10):
@@ -20,14 +20,12 @@ def cos_similarity_top_results(query_vector, text_vectors, names, top_k=10):
     ranking = []
 
     for index in most_similar_indexes:
-        anime_title = names[index]
-        similarity_score = cosine_similarities[index]
-        ranking.append([anime_title, similarity_score])
+        # anime_title = names[index]
+        # similarity_score = cosine_similarities[index]
+        # ranking.append([anime_title, similarity_score])
+        ranking.append(index)
 
     return ranking
-
-# calcula a distancia euclidiana entre o vetor de busca
-# e os vetores de cada anime
 
 
 def euclidean_distance_top_results(query_vector, text_vectors, names, top_k=10):

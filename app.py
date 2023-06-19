@@ -1,20 +1,18 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from src.search_engine import SearchEngine
 
 s_engine = SearchEngine()
 app = Flask(__name__)
+CORS(app)
 
-
-@app.route('/search', methods=['POST'])
+@app.route('/search', methods=['GET'])
 def search():
-    payload = request.get_json()
+    similarity_method = 'cosine'
 
-    text = payload['text']
-
-    # accepted parameters: embedding_method, similarity_method, rank_count
-    embedding_method = request.args['embedding_method']
-    similarity_method = request.args['similarity_method']
-    rank_count = int(request.args['rank_count'])
+    text = request.args['text']
+    embedding_method = request.args['embedding']
+    rank_count = int(request.args['limit'])
 
     ranking = s_engine.search(text, embedding_method,
                               similarity_method, rank_count)
@@ -22,7 +20,8 @@ def search():
     response = {
         'ranking': ranking
     }
-    print(response)
+
+    print("returning response. len(ranking) = " + str(len(ranking)) + " rank_count = " + str(rank_count))
 
     return jsonify(response)
 

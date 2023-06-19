@@ -14,6 +14,9 @@ def bert_simple_preprocess_text(text=''):
     # Remove caracteres especiais e números
     text = re.sub(r'[^a-z ]+', '', text)
 
+    # remove caracters unicos
+    # text = re.sub(r'\b[a-z]\b', '', text)
+
     return text
 
 
@@ -54,13 +57,13 @@ def preprocess_text(text=''):
 def read_animes_json(path=''):
     print('Reading animes.json...')
     animes_file_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', '..', 'public', 'dataset', 'animes.json')) if path == '' else path
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes_with_cover.json')) if path == '' else path
 
     with open(animes_file_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
-    names = data['names']  # array com os títulos dos textos
-    content = data['content']  # array com os textos
+    names = data['names'][:]  # array com os títulos dos textos
+    content = data['content'][:]  # array com os textos
 
     print('adding titles to memory...')
 
@@ -68,4 +71,21 @@ def read_animes_json(path=''):
         curr_title = names[i]
         content[i] = text + ' ' + curr_title
 
-    return names, content
+    return {'titles': names, 'sinopses': content}
+
+
+def read_animes_json_with_cover(path=''):
+    print('Reading animes.json...')
+    animes_file_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes_with_cover.json')) if path == '' else path
+
+    with open(animes_file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    names = data['names'][:]  # array com os títulos dos textos
+    content = data['content'][:]  # array com os textos
+    cover_urls = data['coverUrls'][:]  # array com as uris das imagens
+
+    print('adding titles to memory...')
+
+    return {'names': names, 'content': content, 'coverUrls': cover_urls}
