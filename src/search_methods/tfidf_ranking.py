@@ -1,5 +1,8 @@
 import os
 from sklearn.feature_extraction.text import TfidfVectorizer
+import json
+from tqdm import tqdm
+import numpy as np
 
 from timer import Timer
 from preprocess import preprocess_text, read_animes_json
@@ -28,10 +31,10 @@ def load_tfidf_vectors(names, processed_content):
 
 # Função que realiza a busca
 def get_similarity_ranking(query, anime_data, rank_count=10, similarity_method='cosine'):
-    t = Timer()
-    t.start()
-    print('Searching for: "', query, '" using',
-          similarity_method, 'similarity')
+    # t = Timer()
+    # t.start()
+    # print('Searching for: "', query, '" using',
+    #       similarity_method, 'similarity')
     # Pré-processa a consulta
     query = ' '.join(preprocess_text(query))
     # Transforma a consulta em vetor TF-IDF
@@ -51,7 +54,7 @@ def get_similarity_ranking(query, anime_data, rank_count=10, similarity_method='
         ranking = euclidean_distance_top_results(
             query_vector, text_vectors, anime_data['titles'], rank_count)
 
-    t.stop()
+    # t.stop()
     return ranking
 
 
@@ -83,33 +86,75 @@ class TfIdfRanking:
         return get_bleu_ranking(query, self.anime_data, rank_count)
 
 
+def calculate_f_score(relevant_docs, retrieved_docs):
+    precision = len(set(relevant_docs).intersection(
+        set(retrieved_docs))) / float(len(retrieved_docs))
+    recall = len(set(relevant_docs).intersection(
+        set(retrieved_docs))) / float(len(relevant_docs))
+    if precision + recall == 0:
+        return 0
+    f_score = 2 * (precision * recall) / (precision + recall)
+    return f_score
+
+
 # usage example
-search_phrases = ["it was a knight who use a saint armor blessed by the goddess athena"]
+search_phrases = [
+    "a man who can defeat any enemy with one punch"]
 
 
 def main():
     animes_file_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes.json'))
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes_with_cover.json'))
 
     anime_data = read_animes_json(animes_file_path)
 
+    eval_data_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'eval-data.json'))
+
+    with open(eval_data_path, 'r', encoding='utf-8') as f:
+        eval_data = json.load(f)
+
     model = TfIdfRanking(anime_data[0], anime_data[1])
 
-    lines = []
-    for search_text in search_phrases:
-        print("search phrase: ", search_text, "\n")
+    calculated_f_scores = []
 
-        ranking = model.search_bleu(search_text)
-        # ranking = model.search(search_text, 'cosine')
+    print("Evaluating...", len(eval_data))
 
-        lines.append(f"'{search_text}' --> \n{ranking}\n")
+    for _, data in tqdm(enumerate(eval_data)):
+        curr_query = data['query']
+        relevant_doc_id = data['relevant_doc_id']
+
+        top_idx = model.search(curr_query, 'cosine')
+
+        calculated_f_scores.append(
+            calculate_f_score([relevant_doc_id], [top_idx]))
+
+    print('F-Score: ', np.mean(calculated_f_scores))
+
+    # save results
 
     out_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'tf_idf_bleu_15k.txt'))
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'tfidf_cosine_15k.txt'))
 
     with open(out_path, 'w', encoding='utf-8') as f:
-        for line in lines:
-            f.write(line)
+        f.write(f'F-Score: {np.mean(calculated_f_scores)}\n')
+        f.write(f'F-Scores: {calculated_f_scores}\n')
+
+    # lines = []
+    # for search_text in search_phrases:
+    #     print("search phrase: ", search_text, "\n")
+
+    #     ranking = model.search_bleu(search_text)
+    #     # ranking = model.search(search_text, 'cosine')
+
+    #     lines.append(f"'{search_text}' --> \n{ranking}\n")
+
+    # out_path = os.path.abspath(os.path.join(
+    #     os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'tf_idf_bleu_15k.txt'))
+
+    # with open(out_path, 'w', encoding='utf-8') as f:
+    #     for line in lines:
+    #         f.write(line)
 
 
 main()
