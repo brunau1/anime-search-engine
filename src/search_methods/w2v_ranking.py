@@ -1,5 +1,6 @@
 import os
 import json
+from tqdm import tqdm
 import numpy as np
 from gensim.models import Word2Vec, KeyedVectors
 
@@ -29,9 +30,9 @@ def train_model(vector_size=200):
         text) for text in content if len(text.split()) > 40]
 
     print('Data loaded. Number of texts: ', len(processed_content))
-    model = Word2Vec(min_count=1, # 3
+    model = Word2Vec(min_count=1,  # 3
                      window=3,  # 5
-                     sample=6e-5, # 1e-5
+                     sample=6e-5,  # 1e-5
                      vector_size=vector_size,
                      alpha=0.03,
                      min_alpha=0.007,
@@ -75,10 +76,10 @@ def build_text_vectors(processed_content, model, vector_size):
 
 
 def search(query, names, text_vectors, model, vector_size, top_k=10, similarity_method='cosine'):
-    t = Timer()
-    t.start()
-    print('Searching for: "', query, '" using',
-          similarity_method, 'similarity')
+    # t = Timer()
+    # t.start()
+    # print('Searching for: "', query, '" using',
+    #       similarity_method, 'similarity')
     # Pré-processa a consulta
     processed_query = preprocess_text(query)
 
@@ -99,7 +100,7 @@ def search(query, names, text_vectors, model, vector_size, top_k=10, similarity_
         ranking = euclidean_distance_top_results(
             query_vector, text_vectors, names, top_k)
 
-    t.stop()
+    # t.stop()
     return ranking
 
 
@@ -151,51 +152,83 @@ class WordToVecRanking:
         return search_and_bleu(query, self.names, self.processed_content, self.text_vectors, self.model, self.vector_size, top_k)
 
 
-# usage example
-# search_phrases = ["the soldiers fight to protect the goddess athena",
-#                   "the protagonist is a demon who wants to become a hero",
-#                   "the protagonist gains the power to kill anyone whose name he writes in a notebook",
-#                   "a boy was possessed by a demon and now he has to fight demons",
-#                   "the anime shows a volleyball team which trains to become the best of japan",
-#                   "the anime shows the daily life of a volleyball team in high school",
-#                   "a man who can defeat any enemy with one punch",
-#                   "the protagonist become skinny just training",
-#                   "it has a dragon wich give three wishes to the one who find it",
-#                   "the protagonist always use the wishes to revive his friends",
-#                   "the philosopher stone grants immortality to the one who find it",
-#                   "two brothers lost their bodies and now they have to find the philosopher stone",
-#                   "a ninja kid who wants to become a hokage",
-#                   "the protagonist's dream is to become the pirate king",
-#                   "the protagonist uses a straw hat and can stretch his body",
-#                   "the protagonist got the shinigami sword and now he has to kill hollows",
-#                   "it was a knight who use a saint armor blessed by the goddess athena",
-#                   "the protagonist met a shinigami and goes to the soul society"]
+def calculate_f_score(relevant_docs, retrieved_docs):
+    precision = len(set(relevant_docs).intersection(
+        set(retrieved_docs))) / float(len(retrieved_docs))
+    recall = len(set(relevant_docs).intersection(
+        set(retrieved_docs))) / float(len(relevant_docs))
+    if precision + recall == 0:
+        return 0
+    f_score = 2 * (precision * recall) / (precision + recall)
+    return f_score
 
-search_phrases = ["the volleyball team Karasuno High School faces off against the volleyball team of Shiratorizawa Academy in the final round of the Miyagi Prefecture qualifier tournament."]
+
+# usage example
+search_phrases = ["the protagonist gains the power to kill anyone whose name he writes in a notebook",
+                  "a man who can defeat any enemy with one punch",
+                  "the anime shows a volleyball team which trains to become the best of japan",
+                  "the protagonist has the power of stretch his body and use a straw hat",
+                  "the sayan warrior revive his friends using the wish given by the dragon",
+                  "the philosopher stone grants power and immortality to the one who find it",
+                  "two brothers lost their bodies and now they have to find the philosopher stone",
+                  "a ninja kid who wants to become the best ninja of his village and has a demon inside him",
+                  "the protagonist got the shinigami powers and now he has to kill hollows",
+                  "it was a knight who use a saint armor blessed by the goddess athena"]
+
 
 def main():
     animes_file_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes.json'))
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes_with_cover.json'))
+
+    eval_data_path = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'eval-data.json'))
+
+    with open(eval_data_path, 'r', encoding='utf-8') as f:
+        eval_data = json.load(f)
 
     anime_data = read_animes_json(animes_file_path)
 
-    model = WordToVecRanking(anime_data[0], anime_data[1][:1000])
+    model = WordToVecRanking(anime_data[0], anime_data[1])
 
-    lines = []
-    for search_text in search_phrases:
-        print("search phrase: ", search_text, "\n")
+    calculated_f_scores = []
 
-        ranking = model.search_and_bleu(search_text)
-        # ranking = model.search(search_text, 'cosine')
+    print("Evaluating...", len(eval_data))
 
-        lines.append(f"'{search_text}' --> {ranking}\n")
+    for _, data in tqdm(enumerate(eval_data)):
+        curr_query = data['query']
+        relevant_doc_id = data['relevant_doc_id']
+
+        top_idx = model.search(curr_query, 'cosine')
+
+        calculated_f_scores.append(
+            calculate_f_score([relevant_doc_id], [top_idx]))
+
+    print('F-Score: ', np.mean(calculated_f_scores))
+
+    # save results
 
     out_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'w2v_bleu_15k.txt'))
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'w2v_cosine_15k.txt'))
 
     with open(out_path, 'w', encoding='utf-8') as f:
-        for line in lines:
-            f.write(line)
+        f.write(f'F-Score: {np.mean(calculated_f_scores)}\n')
+        f.write(f'F-Scores: {calculated_f_scores}\n')
+
+    # lines = []
+    # for search_text in search_phrases:
+    #     print("search phrase: ", search_text, "\n")
+
+    #     # ranking = model.search_and_bleu(search_text)
+    #     top_index = model.search(search_text, 'cosine')
+
+    #     lines.append(f"'{search_text}' --> {ranking}\n")
+
+    # out_path = os.path.abspath(os.path.join(
+    #     os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'w2v_bleu_15k.txt'))
+
+    # with open(out_path, 'w', encoding='utf-8') as f:
+    #     for line in lines:
+    #         f.write(line)
 
 
 # train_model()

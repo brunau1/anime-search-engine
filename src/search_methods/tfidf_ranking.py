@@ -1,9 +1,9 @@
 import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from services.timer import Timer
-from services.preprocess import preprocess_text, read_animes_json
-from services.ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
+from timer import Timer
+from preprocess import preprocess_text, read_animes_json
+from ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
 
 # from src.search_methods.services.timer import Timer
 # from src.search_methods.services.preprocess import preprocess_text, read_animes_json

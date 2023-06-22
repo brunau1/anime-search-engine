@@ -15,16 +15,16 @@ def cos_similarity_top_results(query_vector, text_vectors, names, top_k=10):
     most_similar_indexes = cosine_similarities.argsort()[
         ::-1][:int(top_k)]
 
-    print(most_similar_indexes)
+    # print(most_similar_indexes)
 
-    ranking = []
+    # ranking = []
 
-    for index in most_similar_indexes:
-        anime_title = names[index]
-        similarity_score = cosine_similarities[index]
-        ranking.append([anime_title, similarity_score])
+    # for index in most_similar_indexes:
+    #     anime_title = names[index]
+    #     similarity_score = cosine_similarities[index]
+    #     ranking.append([anime_title, similarity_score])
 
-    return ranking
+    return most_similar_indexes[0]
 
 # calcula a distancia euclidiana entre o vetor de busca
 # e os vetores de cada anime
