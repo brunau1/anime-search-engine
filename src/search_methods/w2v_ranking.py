@@ -7,6 +7,7 @@ from gensim.models import Word2Vec, KeyedVectors
 from preprocess import preprocess_text, read_animes_json, preprocess_text
 from ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
 from timer import Timer
+from evaluate_models import calculate_metrics, calculate_mean_average_model_evaluation_metrics
 
 # from src.search_methods.services.timer import Timer
 # from src.search_methods.services.ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
@@ -78,10 +79,12 @@ def build_text_vectors(processed_content, model, vector_size):
 def search(query, names, text_vectors, model, vector_size, top_k=10, similarity_method='cosine'):
     # t = Timer()
     # t.start()
-    # print('Searching for: "', query, '" using',
-    #       similarity_method, 'similarity')
+    # print('Searching for: "', query) #, '" using',
+    #   similarity_method, 'similarity')
     # Pré-processa a consulta
     processed_query = preprocess_text(query)
+
+    print('processed_query: ', processed_query)
 
     query_vector = np.zeros(vector_size)
     for token in processed_query:
@@ -181,7 +184,7 @@ def main():
         os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes_with_cover.json'))
 
     eval_data_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'eval-data.json'))
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'sentences-and-related-docs.json'))
 
     with open(eval_data_path, 'r', encoding='utf-8') as f:
         eval_data = json.load(f)
@@ -190,29 +193,99 @@ def main():
 
     model = WordToVecRanking(anime_data[0], anime_data[1])
 
-    calculated_f_scores = []
+    evaluated_metrics = []
 
     print("Evaluating...", len(eval_data))
 
-    for _, data in tqdm(enumerate(eval_data)):
-        curr_query = data['query']
-        relevant_doc_id = data['relevant_doc_id']
+    for k in [1, 3, 5, 7, 10]:
+        current_evaluated_metrics = {
+            "precision": [],
+            "recall": [],
+            "f_score": [],
+            "f1_score_binary": [],
+            "f1_score_macro": [],
+            "f1_score_micro": [],
+            "f1_score_weighted": []
+        }
 
-        top_idx = model.search(curr_query, 'cosine')
+        print("k: ", k)
 
-        calculated_f_scores.append(
-            calculate_f_score([relevant_doc_id], [top_idx]))
+        for _, curr_eval_data in tqdm(enumerate(eval_data)):
+            print("title: ", curr_eval_data['title'])
 
-    print('F-Score: ', np.mean(calculated_f_scores))
+            curr_queries = curr_eval_data['sentences']
 
-    # save results
+            for curr_query in curr_queries:
+                print("curr_query: ", curr_query)
 
-    out_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'w2v_cosine_15k.txt'))
+                relevant_doc_ids = curr_eval_data['relatedDocs']
 
-    with open(out_path, 'w', encoding='utf-8') as f:
-        f.write(f'F-Score: {np.mean(calculated_f_scores)}\n')
-        f.write(f'F-Scores: {calculated_f_scores}\n')
+                top_idxes = model.search(curr_query, 'cosine', k)
+
+                print("top_idxes: ", top_idxes)
+                print("relevant_doc_ids: ", relevant_doc_ids)
+
+                metrics = calculate_metrics(relevant_doc_ids, top_idxes, k)
+
+                current_evaluated_metrics['precision'].append(
+                    metrics['precision'])
+                current_evaluated_metrics['recall'].append(metrics['recall'])
+                current_evaluated_metrics['f_score'].append(metrics['f_score'])
+                current_evaluated_metrics['f1_score_binary'].append(
+                    metrics['f1_score_binary'])
+                current_evaluated_metrics['f1_score_macro'].append(
+                    metrics['f1_score_macro'])
+                current_evaluated_metrics['f1_score_micro'].append(
+                    metrics['f1_score_micro'])
+                current_evaluated_metrics['f1_score_weighted'].append(
+                    metrics['f1_score_weighted'])
+
+        average_model_metrics = calculate_mean_average_model_evaluation_metrics(
+            current_evaluated_metrics)
+
+        print("average_model_metrics: ", average_model_metrics)
+
+        evaluated_metrics.append({
+            "k": k,
+            "average_metrics": average_model_metrics,
+            "all_metrics": current_evaluated_metrics
+        })
+
+    out_path_average = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'w2v_evaluation_metrics_15k.json'))
+
+    with open(out_path_average, 'w', encoding='utf-8') as f:
+        json.dump(average_model_metrics, f, indent=4)
+
+    out_path_all = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'w2v_evaluation_metrics_all_15k.json'))
+
+    with open(out_path_all, 'w', encoding='utf-8') as f:
+        json.dump(evaluated_metrics, f, indent=4)
+
+    # calculated_f_scores = []
+
+    # print("Evaluating...", len(eval_data))
+
+    # for _, data in tqdm(enumerate(eval_data)):
+    #     curr_query = data['query']
+    #     relevant_doc_id = data['relevant_doc_id']
+
+    #     top_idx = model.search(curr_query, 'cosine')
+
+    #     calculated_f_scores.append(
+    #         calculate_f_score([relevant_doc_id], [top_idx]))
+
+    # print('F-Score: ', np.mean(calculated_f_scores))
+
+    # # save results
+
+    # out_path = os.path.abspath(os.path.join(
+    #     os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'w2v_cosine_15k.txt'))
+
+    # with open(out_path, 'w', encoding='utf-8') as f:
+    #     f.write(f'F-Score: {np.mean(calculated_f_scores)}\n')
+    #     f.write(f'F-Scores: {calculated_f_scores}\n')
 
     # lines = []
     # for search_text in search_phrases:
