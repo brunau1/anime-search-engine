@@ -7,6 +7,7 @@ import numpy as np
 from timer import Timer
 from preprocess import preprocess_text, read_animes_json
 from ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
+from evaluate_models import calculate_metrics, calculate_mean_average_model_evaluation_metrics
 
 # from src.search_methods.services.timer import Timer
 # from src.search_methods.services.preprocess import preprocess_text, read_animes_json
@@ -109,36 +110,97 @@ def main():
     anime_data = read_animes_json(animes_file_path)
 
     eval_data_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'eval-data.json'))
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'sentences-and-related-docs.json'))
 
     with open(eval_data_path, 'r', encoding='utf-8') as f:
         eval_data = json.load(f)
 
     model = TfIdfRanking(anime_data[0], anime_data[1])
 
-    calculated_f_scores = []
+    evaluated_metrics = {
+        "precision": [],
+        "recall": [],
+        "f_score": [],
+        "f1_score_binary": [],
+        "f1_score_macro": [],
+        "f1_score_micro": [],
+        "f1_score_weighted": []
+    }
 
     print("Evaluating...", len(eval_data))
 
-    for _, data in tqdm(enumerate(eval_data)):
-        curr_query = data['query']
-        relevant_doc_id = data['relevant_doc_id']
+    for k in [1, 3, 5, 7, 10]:
+        print("k: ", k)
 
-        top_idx = model.search(curr_query, 'cosine')
+        for _, curr_eval_data in tqdm(enumerate(eval_data)):
+            print("title: ", curr_eval_data['title'])
 
-        calculated_f_scores.append(
-            calculate_f_score([relevant_doc_id], [top_idx]))
+            curr_queries = curr_eval_data['sentences']
 
-    print('F-Score: ', np.mean(calculated_f_scores))
+            for curr_query in curr_queries:
+                print("curr_query: ", curr_query)
 
-    # save results
+                relevant_doc_ids = curr_eval_data['relatedDocs']
 
-    out_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'tfidf_cosine_15k.txt'))
+                top_idxes = model.search(curr_query, 'cosine', k)
 
-    with open(out_path, 'w', encoding='utf-8') as f:
-        f.write(f'F-Score: {np.mean(calculated_f_scores)}\n')
-        f.write(f'F-Scores: {calculated_f_scores}\n')
+                print("top_idxes: ", top_idxes)
+                print("relevant_doc_ids: ", relevant_doc_ids)
+
+                metrics = calculate_metrics(relevant_doc_ids, top_idxes, k)
+
+                evaluated_metrics['precision'].append(metrics['precision'])
+                evaluated_metrics['recall'].append(metrics['recall'])
+                evaluated_metrics['f_score'].append(metrics['f_score'])
+                evaluated_metrics['f1_score_binary'].append(
+                    metrics['f1_score_binary'])
+                evaluated_metrics['f1_score_macro'].append(
+                    metrics['f1_score_macro'])
+                evaluated_metrics['f1_score_micro'].append(
+                    metrics['f1_score_micro'])
+                evaluated_metrics['f1_score_weighted'].append(
+                    metrics['f1_score_weighted'])
+
+    average_model_metrics = calculate_mean_average_model_evaluation_metrics(
+        evaluated_metrics)
+
+    print("average_model_metrics: ", average_model_metrics)
+
+    out_path_average = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'tfidf_evaluation_metrics_15k.json'))
+
+    with open(out_path_average, 'w', encoding='utf-8') as f:
+        json.dump(average_model_metrics, f, indent=4)
+
+    out_path_all = os.path.abspath(os.path.join(
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'tfidf_evaluation_metrics_all_15k.json'))
+
+    with open(out_path_all, 'w', encoding='utf-8') as f:
+        json.dump(evaluated_metrics, f, indent=4)
+
+    # calculated_f_scores = []
+
+    # print("Evaluating...", len(eval_data))
+
+    # for _, data in tqdm(enumerate(eval_data)):
+    #     curr_query = data['query']
+    #     relevant_doc_id = data['relevant_doc_id']
+
+    #     top_idx = model.search(curr_query, 'cosine')
+
+    #     calculated_f_scores.append(
+    #         calculate_f_score([relevant_doc_id], [top_idx]))
+
+    # print('F-Score: ', np.mean(calculated_f_scores))
+
+    # # save results
+
+    # out_path = os.path.abspath(os.path.join(
+    #     os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'tfidf_cosine_15k.txt'))
+
+    # with open(out_path, 'w', encoding='utf-8') as f:
+    #     f.write(f'F-Score: {np.mean(calculated_f_scores)}\n')
+    #     f.write(f'F-Scores: {calculated_f_scores}\n')
 
     # lines = []
     # for search_text in search_phrases:
