@@ -7,7 +7,7 @@ import numpy as np
 from timer import Timer
 from preprocess import preprocess_text, read_animes_json
 from ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
-from evaluate_models import calculate_metrics, calculate_mean_average_model_evaluation_metrics
+from evaluate_models import calculate_metrics, calculate_mean_average_model_evaluation_metrics, calculate_bleu_score
 
 # from src.search_methods.services.timer import Timer
 # from src.search_methods.services.preprocess import preprocess_text, read_animes_json
@@ -117,19 +117,22 @@ def main():
 
     model = TfIdfRanking(anime_data[0], anime_data[1])
 
-    evaluated_metrics = {
-        "precision": [],
-        "recall": [],
-        "f_score": [],
-        "f1_score_binary": [],
-        "f1_score_macro": [],
-        "f1_score_micro": [],
-        "f1_score_weighted": []
-    }
+    evaluated_metrics = []
 
     print("Evaluating...", len(eval_data))
 
     for k in [1, 3, 5, 7, 10]:
+        current_evaluated_metrics = {
+            "precision": [],
+            "recall": [],
+            "f_score": [],
+            "f1_score_binary": [],
+            "f1_score_macro": [],
+            "f1_score_micro": [],
+            "f1_score_weighted": [],
+            "bleu": []
+        }
+
         print("k: ", k)
 
         for _, curr_eval_data in tqdm(enumerate(eval_data)):
@@ -149,28 +152,33 @@ def main():
 
                 metrics = calculate_metrics(relevant_doc_ids, top_idxes, k)
 
-                evaluated_metrics['precision'].append(metrics['precision'])
-                evaluated_metrics['recall'].append(metrics['recall'])
-                evaluated_metrics['f_score'].append(metrics['f_score'])
-                evaluated_metrics['f1_score_binary'].append(
+                for _, idx in enumerate(top_idxes):
+                    current_evaluated_metrics['bleu'].append(
+                        calculate_bleu_score(curr_query, anime_data[1], idx))
+
+                current_evaluated_metrics['precision'].append(
+                    metrics['precision'])
+                current_evaluated_metrics['recall'].append(metrics['recall'])
+                current_evaluated_metrics['f_score'].append(metrics['f_score'])
+                current_evaluated_metrics['f1_score_binary'].append(
                     metrics['f1_score_binary'])
-                evaluated_metrics['f1_score_macro'].append(
+                current_evaluated_metrics['f1_score_macro'].append(
                     metrics['f1_score_macro'])
-                evaluated_metrics['f1_score_micro'].append(
+                current_evaluated_metrics['f1_score_micro'].append(
                     metrics['f1_score_micro'])
-                evaluated_metrics['f1_score_weighted'].append(
+                current_evaluated_metrics['f1_score_weighted'].append(
                     metrics['f1_score_weighted'])
 
-    average_model_metrics = calculate_mean_average_model_evaluation_metrics(
-        evaluated_metrics)
+        average_model_metrics = calculate_mean_average_model_evaluation_metrics(
+            current_evaluated_metrics)
 
-    print("average_model_metrics: ", average_model_metrics)
+        print("average_model_metrics: ", average_model_metrics)
 
-    out_path_average = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'tfidf_evaluation_metrics_15k.json'))
-
-    with open(out_path_average, 'w', encoding='utf-8') as f:
-        json.dump(average_model_metrics, f, indent=4)
+        evaluated_metrics.append({
+            "k": k,
+            "average_metrics": average_model_metrics,
+            "all_metrics": current_evaluated_metrics
+        })
 
     out_path_all = os.path.abspath(os.path.join(
         os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'tfidf_evaluation_metrics_all_15k.json'))

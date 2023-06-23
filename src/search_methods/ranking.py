@@ -24,7 +24,7 @@ def cos_similarity_top_results(query_vector, text_vectors, names, top_k=10):
     #     similarity_score = cosine_similarities[index]
     #     ranking.append([anime_title, similarity_score])
 
-    return most_similar_indexes[0]
+    return most_similar_indexes
 
 # calcula a distancia euclidiana entre o vetor de busca
 # e os vetores de cada anime

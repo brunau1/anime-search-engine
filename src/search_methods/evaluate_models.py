@@ -1,16 +1,53 @@
-import os
 import numpy as np
-import json
+import nltk
+import re
 from sklearn.metrics import f1_score
+from nltk.translate.bleu_score import sentence_bleu
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import SnowballStemmer
+nltk.download('stopwords')
+nltk.download('punkt')
 
-from preprocess import preprocess_text
+
+def preprocess_text(text=''):
+    stop_words = set(stopwords.words('english'))
+    # Converte para minúsculas
+    text = text.lower()
+
+    # Remove pontuação
+    text = re.sub(r'[^a-z ]+', '', text)
+    # Tokenização
+    tokens = word_tokenize(text)
+
+    # Remoção de stopwords
+    tokens = [token for token in tokens if token not in stop_words]
+
+    # Stemming
+    stemmer = SnowballStemmer('english')
+    stems = [stemmer.stem(token) for token in tokens]
+
+    # Reconstroi o texto a partir dos tokens processados
+    return stems
 
 
-evaluation_data_path = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'sentences-and-related-docs.json'))
+def calculate_bleu_score(query, texts, retrieved_doc_id):
+    '''
+        Calculate the BLEU score for the retrieved document
+    '''
+    # tokenize the query
+    reference = preprocess_text(query)
+    candidate = preprocess_text(texts[retrieved_doc_id])
 
-with open(evaluation_data_path, 'r', encoding='utf-8') as f:
-    evaluation_data = json.load(f)
+    # remove from the candidate the words that are not in the reference
+    candidate = [word for word in candidate if word in reference]
+
+    candidate = list(dict.fromkeys(candidate))
+
+    # calculate the BLEU score
+    score = sentence_bleu([candidate], reference, weights=(1, 0, 0, 0))
+
+    return score
 
 
 def calculate_f_score(relevant_docs, retrieved_docs):
@@ -139,7 +176,8 @@ def calculate_mean_average_model_evaluation_metrics(model_metrics):
         "f1_score_binary": 0,
         "f1_score_macro": 0,
         "f1_score_micro": 0,
-        "f1_score_weighted": 0
+        "f1_score_weighted": 0,
+        "bleu": 0
     }
 
     for metric in average_metrics:
@@ -195,6 +233,7 @@ def calculate_metrics(relevant_docs, retrieved_docs, K=10):
 
     # now pick the K first docs in relevant_docs
     reference_docs = reference_docs[:K]
+    print(f"reference docs: {reference_docs}")
 
     binary_true_labels, binary_pred_labels = get_true_pred_binary_labels(
         reference_docs, retrieved_docs)

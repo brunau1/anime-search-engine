@@ -7,7 +7,7 @@ from gensim.models import Word2Vec, KeyedVectors
 from preprocess import preprocess_text, read_animes_json, preprocess_text
 from ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
 from timer import Timer
-from evaluate_models import calculate_metrics, calculate_mean_average_model_evaluation_metrics
+from evaluate_models import calculate_metrics, calculate_mean_average_model_evaluation_metrics, calculate_bleu_score
 
 # from src.search_methods.services.timer import Timer
 # from src.search_methods.services.ranking import cos_similarity_top_results, euclidean_distance_top_results, calculate_bleu_1_score_for_texts
@@ -205,7 +205,8 @@ def main():
             "f1_score_binary": [],
             "f1_score_macro": [],
             "f1_score_micro": [],
-            "f1_score_weighted": []
+            "f1_score_weighted": [],
+            "bleu": []
         }
 
         print("k: ", k)
@@ -226,6 +227,10 @@ def main():
                 print("relevant_doc_ids: ", relevant_doc_ids)
 
                 metrics = calculate_metrics(relevant_doc_ids, top_idxes, k)
+
+                for _, idx in enumerate(top_idxes):
+                    current_evaluated_metrics['bleu'].append(
+                        calculate_bleu_score(curr_query, anime_data[1], idx))
 
                 current_evaluated_metrics['precision'].append(
                     metrics['precision'])
@@ -250,12 +255,6 @@ def main():
             "average_metrics": average_model_metrics,
             "all_metrics": current_evaluated_metrics
         })
-
-    out_path_average = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'w2v_evaluation_metrics_15k.json'))
-
-    with open(out_path_average, 'w', encoding='utf-8') as f:
-        json.dump(average_model_metrics, f, indent=4)
 
     out_path_all = os.path.abspath(os.path.join(
         os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'w2v_evaluation_metrics_all_15k.json'))
