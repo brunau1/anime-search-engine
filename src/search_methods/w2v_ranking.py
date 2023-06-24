@@ -184,7 +184,7 @@ def main():
         os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'animes_with_cover.json'))
 
     eval_data_path = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'sentences-and-related-docs.json'))
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'titles-and-related-docs.json'))
 
     with open(eval_data_path, 'r', encoding='utf-8') as f:
         eval_data = json.load(f)
@@ -257,7 +257,7 @@ def main():
         })
 
     out_path_all = os.path.abspath(os.path.join(
-        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'w2v_evaluation_metrics_all_15k.json'))
+        os.path.dirname(__file__), '..', '..', 'public', 'dataset', 'search_results', 'w2v_evaluation_metrics_all_15k_titles.json'))
 
     with open(out_path_all, 'w', encoding='utf-8') as f:
         json.dump(evaluated_metrics, f, indent=4)
